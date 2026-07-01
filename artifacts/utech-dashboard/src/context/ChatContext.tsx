@@ -15,110 +15,112 @@ interface ChatContextValue {
   messages: ChatMessage[];
   unreadCount: number;
   isOnline: boolean;
-  sendMessage: (text: string, file?: { url: string; name: string; type: string }) => void;
-  replyAsAdmin: (text: string, file?: { url: string; name: string; type: string }) => void;
-  markAllRead: () => void;
-  clearChat: () => void;
+  loading: boolean;
+  sendMessage: (text: string, file?: { url: string; name: string; type: string }) => Promise<void>;
+  replyAsAdmin: (text: string, file?: { url: string; name: string; type: string }) => Promise<void>;
+  markAllRead: () => Promise<void>;
+  clearChat: () => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
-const STORAGE_KEY = 'utech_chat_messages';
-const UNREAD_KEY  = 'utech_chat_unread';
 
-function genId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
+const API = '/api';
 
-function nowStr() {
-  return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
-
-const WELCOME: ChatMessage = {
-  id: 'welcome',
-  from: 'admin',
-  text: "👋 Hi! We're live and ready to help. How can we assist you today?",
-  timestamp: nowStr(),
-  read: true,
-};
-
-function loadMessages(): ChatMessage[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as ChatMessage[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return [WELCOME];
-}
-
-function loadUnread(): number {
-  try { return Number(localStorage.getItem(UNREAD_KEY)) || 0; } catch { return 0; }
+async function apiFetch(path: string, opts?: RequestInit) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  if (!res.ok) throw new Error(`API ${path} failed: ${res.status}`);
+  return res.json();
 }
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [messages, setMessages]       = useState<ChatMessage[]>(loadMessages);
-  const [unreadCount, setUnreadCount] = useState<number>(loadUnread);
+  const [messages, setMessages]       = useState<ChatMessage[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading]         = useState(true);
   const isOnline = true;
 
-  // Persist messages whenever they change
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch {}
-  }, [messages]);
-
-  // Persist unread count
-  useEffect(() => {
-    try { localStorage.setItem(UNREAD_KEY, String(unreadCount)); } catch {}
-  }, [unreadCount]);
-
-  // Cross-tab sync — pick up messages sent from admin panel in another tab
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const updated = JSON.parse(e.newValue) as ChatMessage[];
-          if (Array.isArray(updated)) setMessages(updated);
-        } catch {}
-      }
-      if (e.key === UNREAD_KEY && e.newValue !== null) {
-        setUnreadCount(Number(e.newValue) || 0);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+  const fetchMessages = useCallback(async () => {
+    try {
+      const data = await apiFetch('/chat') as ChatMessage[];
+      setMessages(data);
+      setUnreadCount(data.filter(m => m.from === 'user' && !m.read).length);
+    } catch (e) {
+      console.error('ChatContext fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const sendMessage = useCallback((text: string, file?: { url: string; name: string; type: string }) => {
-    const msg: ChatMessage = {
-      id: genId(), from: 'user', text, timestamp: nowStr(),
+  useEffect(() => {
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5_000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
+
+  const sendMessage = useCallback(async (text: string, file?: { url: string; name: string; type: string }) => {
+    const optimistic: ChatMessage = {
+      id: `opt-${Date.now()}`,
+      from: 'user', text,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
       ...(file ? { fileUrl: file.url, fileName: file.name, fileType: file.type } : {}),
       read: false,
     };
-    setMessages(prev => [...prev, msg]);
+    setMessages(prev => [...prev, optimistic]);
     setUnreadCount(prev => prev + 1);
-  }, []);
+    try {
+      await apiFetch('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ from: 'user', text, ...file ? { fileUrl: file.url, fileName: file.name, fileType: file.type } : {} }),
+      });
+      await fetchMessages();
+    } catch (e) {
+      console.error('sendMessage error:', e);
+    }
+  }, [fetchMessages]);
 
-  const replyAsAdmin = useCallback((text: string, file?: { url: string; name: string; type: string }) => {
-    const msg: ChatMessage = {
-      id: genId(), from: 'admin', text, timestamp: nowStr(),
+  const replyAsAdmin = useCallback(async (text: string, file?: { url: string; name: string; type: string }) => {
+    const optimistic: ChatMessage = {
+      id: `opt-admin-${Date.now()}`,
+      from: 'admin', text,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
       ...(file ? { fileUrl: file.url, fileName: file.name, fileType: file.type } : {}),
       read: true,
     };
-    setMessages(prev => [...prev, msg]);
-  }, []);
+    setMessages(prev => [...prev, optimistic]);
+    try {
+      await apiFetch('/chat', {
+        method: 'POST',
+        body: JSON.stringify({ from: 'admin', text, ...file ? { fileUrl: file.url, fileName: file.name, fileType: file.type } : {} }),
+      });
+      await fetchMessages();
+    } catch (e) {
+      console.error('replyAsAdmin error:', e);
+    }
+  }, [fetchMessages]);
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
     setMessages(prev => prev.map(m => ({ ...m, read: true })));
     setUnreadCount(0);
+    try {
+      await apiFetch('/chat/mark-all-read', { method: 'POST' });
+    } catch (e) {
+      console.error('markAllRead error:', e);
+    }
   }, []);
 
-  const clearChat = useCallback(() => {
-    setMessages([WELCOME]);
-    setUnreadCount(0);
-  }, []);
+  const clearChat = useCallback(async () => {
+    try {
+      await apiFetch('/chat', { method: 'DELETE' });
+      await fetchMessages();
+    } catch (e) {
+      console.error('clearChat error:', e);
+    }
+  }, [fetchMessages]);
 
   return (
-    <ChatContext.Provider value={{ messages, unreadCount, isOnline, sendMessage, replyAsAdmin, markAllRead, clearChat }}>
+    <ChatContext.Provider value={{ messages, unreadCount, isOnline, loading, sendMessage, replyAsAdmin, markAllRead, clearChat }}>
       {children}
     </ChatContext.Provider>
   );
