@@ -140,6 +140,51 @@ function AppShell() {
     }
   };
 
+  // ── Admin mode: isolated layout, no user nav ──
+  if (activePage === 'admin') {
+    return (
+      <div className="flex flex-col h-screen bg-background overflow-hidden">
+        {/* Admin header */}
+        <header className="shrink-0 h-12 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="w-6 h-6 rounded-md bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <Server className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <span className="text-xs font-bold text-primary font-mono uppercase tracking-widest">UTECH Admin Panel</span>
+            <span className="text-[10px] bg-primary/10 border border-primary/20 text-primary font-mono px-1.5 py-0.5 rounded ml-1">RESTRICTED</span>
+          </div>
+          <button
+            onClick={() => {
+              history.replaceState(null, '', window.location.pathname);
+              setActivePage('dashboard');
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-border hover:border-border/80 transition-all"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Exit Admin
+          </button>
+        </header>
+
+        {/* Admin content — full width, no sidebar */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <div className="max-w-[1400px] mx-auto">
+            <AdminPage />
+          </div>
+        </main>
+
+        <footer className="hidden lg:flex items-center justify-between px-6 py-3 border-t border-border bg-card/50 text-[10px] text-muted-foreground font-mono">
+          <span>UTECH SERVER UNLOCK v4.2 — Admin Session Active</span>
+          <div className="flex items-center gap-4">
+            <span>Unlock Server: <span className="text-green-400">Operational</span></span>
+            <span>Processing Cluster: <span className="text-green-400">Active</span></span>
+          </div>
+        </footer>
+
+        <Toaster theme="dark" position="bottom-right" />
+      </div>
+    );
+  }
+
   const lowCredits  = credits < 5;
   const noCredits   = credits < 1;
   const warningCount = NOTIFICATIONS.filter(n => n.type === 'warning').length;
