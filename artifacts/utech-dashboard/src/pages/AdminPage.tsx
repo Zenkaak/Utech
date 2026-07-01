@@ -429,6 +429,82 @@ function EditTab({ selectedId, orders, updateOrder, addEvent }: {
         </p>
       </div>
 
+      {/* ── Notice Count ── */}
+      <div className="space-y-2">
+        <label className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider flex items-center gap-1.5">
+          <AlertCircle className="w-3 h-3" />Notices Issued
+        </label>
+        <div className="flex gap-2">
+          {([0, 1, 2] as const).map(n => (
+            <button
+              key={n}
+              onClick={() => {
+                const prev = order.noticeCount ?? 0;
+                updateOrder(selectedId, { noticeCount: n });
+                if (n > prev) {
+                  addEvent(selectedId, {
+                    time: nowTime(),
+                    msg: 'Notice #' + n + ' issued' + (n === 2 ? ' — Term 13 auto-closure applies' : ''),
+                    type: n === 2 ? 'warn' : 'info',
+                  });
+                }
+                toast.success('Notice count → ' + n);
+              }}
+              className={[
+                'flex-1 py-2.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5',
+                (order.noticeCount ?? 0) === n
+                  ? n === 2 ? 'bg-red-500/20 border-red-500/40 text-red-400'
+                  : n === 1 ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                            : 'bg-secondary/80 border-border/80 text-foreground'
+                  : 'bg-secondary/40 border-border text-muted-foreground hover:bg-secondary',
+              ].join(' ')}
+            >
+              {n === 2 && <AlertCircle className="w-3 h-3" />}
+              {n === 1 && <Info className="w-3 h-3" />}
+              {n} {n === 1 ? 'Notice' : 'Notices'}
+            </button>
+          ))}
+        </div>
+
+        {/* Term 13 / 13.1 alert banner */}
+        {(order.noticeCount ?? 0) === 2 && (() => {
+          const remaining = order.countdownUntil ? order.countdownUntil - Date.now() : null;
+          const underOneHour = remaining !== null && remaining > 0 && remaining < 3_600_000;
+          const expired = remaining !== null && remaining <= 0;
+          return (
+            <div className={[
+              'rounded-lg border px-3 py-2.5 text-[11px] leading-relaxed space-y-1',
+              underOneHour
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                : 'border-red-500/40 bg-red-500/10 text-red-300',
+            ].join(' ')}>
+              {underOneHour ? (
+                <>
+                  <p className="font-bold text-amber-400 flex items-center gap-1.5">
+                    <Timer className="w-3.5 h-3.5" />Term 13.1 — Grace Period Applies
+                  </p>
+                  <p>2nd notice issued with less than 1 hr remaining. Start a 1-hour grace period below before closing.</p>
+                </>
+              ) : expired ? (
+                <>
+                  <p className="font-bold text-red-400 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />Term 13 — Order Window Expired
+                  </p>
+                  <p>Countdown has expired. This order may be closed immediately per Term 13.</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-red-400 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />Term 13 — Auto-Closure Triggered
+                  </p>
+                  <p>2 notices have been issued. Order is subject to immediate closure. No further notices required.</p>
+                </>
+              )}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* ── Grace Period — Term 13.1 ── */}
       <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
         <div className="flex items-center justify-between">
@@ -532,6 +608,17 @@ function EditTab({ selectedId, orders, updateOrder, addEvent }: {
         </div>
         <div className="flex justify-between text-xs"><span className="text-muted-foreground">Carrier</span><span>{carrier || '—'}</span></div>
         <div className="flex justify-between text-xs"><span className="text-muted-foreground">Region</span><span>{region || '—'}</span></div>
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Notices Issued</span>
+          <span className={
+            (order.noticeCount ?? 0) === 2 ? 'text-red-400 font-bold' :
+            (order.noticeCount ?? 0) === 1 ? 'text-amber-400 font-semibold' :
+            'text-muted-foreground'
+          }>
+            {order.noticeCount ?? 0} / 2
+            {(order.noticeCount ?? 0) === 2 && ' — Term 13'}
+          </span>
+        </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Grace Period</span>
           <span className={gracePeriod.active
@@ -856,6 +943,16 @@ function ManageTab({ orders, deleteOrder, updateOrder }: {
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-semibold text-foreground">{o.id}</span>
                 <span className="text-[10px] text-muted-foreground font-mono bg-secondary/50 px-1.5 py-0.5 rounded">{o.ref}</span>
+                {(o.noticeCount ?? 0) > 0 && (
+                  <span className={[
+                    'text-[9px] font-bold font-mono px-1.5 py-0.5 rounded border',
+                    o.noticeCount === 2
+                      ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                      : 'bg-amber-500/15 border-amber-500/30 text-amber-400',
+                  ].join(' ')}>
+                    {o.noticeCount === 2 ? '⚠ 2 NOTICES' : '1 NOTICE'}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-[10px] text-muted-foreground">{o.carrier}</span>
