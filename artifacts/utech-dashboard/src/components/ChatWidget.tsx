@@ -65,6 +65,7 @@ export function ChatWidget() {
         </AnimatePresence>
 
         <button
+          data-chat-toggle
           onClick={() => setOpen(o => !o)}
           className="relative w-14 h-14 rounded-2xl bg-primary shadow-[0_0_24px_rgba(2,132,199,0.4)] hover:shadow-[0_0_32px_rgba(2,132,199,0.6)] flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
         >
