@@ -4,7 +4,8 @@ import {
   ShieldCheck, Activity, Clock, Zap, CheckCircle2, TrendingUp,
   Smartphone, Globe, Wifi, Server, RefreshCw, Users,
   ArrowRight, Cpu, Bell, Plus, MessageCircle, Sparkles,
-  BadgeCheck, Star, ChevronRight,
+  BadgeCheck, Star, ChevronRight, AlertTriangle, Info,
+  BarChart3, Signal, Layers, Target, LucideIcon,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,14 +20,46 @@ interface DashboardPageProps {
 
 const DEVICE_BREAKDOWN = [
   { brand: 'Apple iPhone',   share: 54, color: 'bg-primary'          },
-  { brand: 'Samsung Galaxy', share: 28, color: 'bg-purple-500'       },
+  { brand: 'Samsung Galaxy', share: 28, color: 'bg-violet-500'       },
   { brand: 'Xiaomi / POCO',  share: 9,  color: 'bg-orange-400'       },
-  { brand: 'Google Pixel',   share: 5,  color: 'bg-green-500'        },
-  { brand: 'Other',          share: 4,  color: 'bg-muted-foreground' },
+  { brand: 'Google Pixel',   share: 5,  color: 'bg-emerald-500'      },
+  { brand: 'Other',          share: 4,  color: 'bg-zinc-500'         },
 ];
 
 const HOURLY_VOLUME = [12, 18, 9, 24, 31, 28, 19, 35, 42, 38, 29, 47];
 const HOURS = ['01','03','05','07','09','11','13','15','17','19','21','23'];
+
+function StatCard({
+  icon: Icon, label, value, sub, color, bg, delay,
+}: {
+  icon: LucideIcon; label: string; value: string; sub: string;
+  color: string; bg: string; delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -3, transition: { duration: 0.15 } }}
+    >
+      <Card className="relative overflow-hidden p-5 border border-border/60 bg-card/60 backdrop-blur-sm hover:border-border hover:bg-card/80 transition-all duration-200 cursor-default group h-full">
+        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-br ${bg} pointer-events-none`} />
+        <div className="relative flex items-start justify-between mb-4">
+          <div className={`w-10 h-10 rounded-2xl ${bg.replace('from-', 'bg-').split(' ')[0]}/20 border border-current/10 flex items-center justify-center`}
+            style={{}}>
+            <Icon className={`w-4.5 h-4.5 ${color}`} style={{ width: 18, height: 18 }} />
+          </div>
+          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
+        </div>
+        <div className="relative">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-1">{label}</p>
+          <p className="text-3xl font-black font-mono text-foreground leading-none tracking-tight">{value}</p>
+          <p className={`text-[11px] mt-2 font-medium ${color} opacity-90`}>{sub}</p>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
 
 export function DashboardPage({ credits, onNavigate }: DashboardPageProps) {
   const { orders } = useOrders();
@@ -95,229 +128,330 @@ export function DashboardPage({ credits, onNavigate }: DashboardPageProps) {
     return { total, successCount, activeCount, processingCount, queuedCount, successRate, finalCarrierStats, recentAlerts, finalQueueList, maxQueueJobs };
   }, [orders]);
 
-  // Recent completed orders for the satisfaction strip
   const recentCompleted = orders.filter(o => o.status === 'success').slice(0, 3);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
 
-      {/* ── Hero banner ── */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
-        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-[#0a1628] via-card/80 to-card/50">
-          {/* Glow orbs */}
-          <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-8 left-8 w-32 h-32 rounded-full bg-cyan-500/8 blur-2xl pointer-events-none" />
+      {/* ── Hero ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="relative overflow-hidden rounded-3xl border border-white/6 bg-gradient-to-br from-[#0b1629] via-[#0d1f3c]/80 to-card/60">
+          {/* Ambient glows */}
+          <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/8 blur-[80px] pointer-events-none" />
+          <div className="absolute -bottom-16 left-0 w-64 h-64 rounded-full bg-cyan-500/5 blur-[60px] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-          <div className="relative p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <h2 className="text-xl font-black text-foreground tracking-tight">Welcome back, Tech Support</h2>
-                <Badge className="text-[9px] bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 uppercase tracking-wider">Pro · Tier 2</Badge>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap mb-3">
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  Platform <span className="text-green-400 font-semibold">100% operational</span>
-                </span>
-                <span className="text-muted-foreground/30">·</span>
-                <span className="text-xs text-muted-foreground">{stats.successRate}% success rate</span>
-                <span className="text-muted-foreground/30">·</span>
-                <span className="text-xs text-muted-foreground">{stats.activeCount} active jobs</span>
-              </div>
-
-              {/* Credit warning */}
-              {(low || empty) && (
-                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${
-                  empty ? 'bg-red-500/10 border-red-500/25 text-red-400' : 'bg-yellow-500/10 border-yellow-500/25 text-yellow-400'
-                }`}>
-                  <Zap className="w-3 h-3" />
-                  {empty ? 'No credits remaining — top up to resume' : `Low balance: ${credits} CR`}
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+              <div className="flex-1 min-w-0">
+                {/* Status pill */}
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Platform 100% Operational
+                  <span className="text-emerald-400/50 mx-0.5">·</span>
+                  <span className="text-emerald-400/80">{stats.successRate}% success</span>
                 </div>
-              )}
-            </div>
 
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              <Button size="sm" variant="outline" className="gap-1.5 text-xs border-border" onClick={() => onNavigate('history')}>
-                <ClockIcon className="w-3.5 h-3.5" />View Orders
-              </Button>
-              <Button size="sm" className="gap-1.5 text-xs shadow-[0_0_20px_rgba(2,132,199,0.25)] hover:shadow-[0_0_28px_rgba(2,132,199,0.4)] transition-shadow" onClick={() => onNavigate('request')}>
-                <Plus className="w-3.5 h-3.5" />New Request
-              </Button>
+                <div className="flex items-center gap-2.5 flex-wrap mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight leading-tight">
+                    Welcome back, Tech Support
+                  </h1>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                    Pro · Tier 2
+                  </span>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-5">
+                  {stats.activeCount > 0
+                    ? <><span className="text-primary font-semibold">{stats.activeCount} jobs</span> actively processing right now</>
+                    : 'All queues clear — ready for new requests'}
+                </p>
+
+                {(low || empty) && (
+                  <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold ${
+                    empty ? 'bg-red-500/10 border-red-500/25 text-red-400' : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                  }`}>
+                    <Zap className="w-3.5 h-3.5" />
+                    {empty ? 'No credits — top up to resume unlocks' : `Low balance: ${credits} CR remaining`}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2.5 shrink-0">
+                <Button
+                  className="gap-2 text-sm font-semibold shadow-[0_0_24px_rgba(2,132,199,0.3)] hover:shadow-[0_0_32px_rgba(2,132,199,0.5)] transition-all"
+                  onClick={() => onNavigate('request')}
+                >
+                  <Plus className="w-4 h-4" />
+                  New Unlock Request
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 text-xs border-border/60 text-muted-foreground hover:text-foreground"
+                  onClick={() => onNavigate('history')}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  View Order History
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Completed orders strip */}
+          {/* Completed strip */}
           {recentCompleted.length > 0 && (
-            <div className="relative border-t border-border/50 bg-emerald-500/4 px-5 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap">
+            <div className="relative border-t border-white/6 bg-emerald-500/5 px-6 sm:px-8 py-3 flex items-center gap-3 flex-wrap">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span className="text-xs text-emerald-400 font-semibold">
-                {recentCompleted.length} order{recentCompleted.length > 1 ? 's' : ''} completed successfully
+                {recentCompleted.length} order{recentCompleted.length > 1 ? 's' : ''} completed
               </span>
               <div className="flex gap-2 flex-wrap">
                 {recentCompleted.map(o => (
                   <button key={o.id}
                     onClick={() => onNavigate('history')}
-                    className="text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full hover:bg-emerald-500/20 transition-colors">
+                    className="text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full hover:bg-emerald-500/20 transition-colors">
                     {o.ref}
                   </button>
                 ))}
               </div>
-              <span className="ml-auto text-[10px] text-muted-foreground hidden sm:block">View in Order History →</span>
+              <span className="ml-auto text-[10px] text-muted-foreground/60 hidden sm:flex items-center gap-1">
+                View in Order History <ChevronRight className="w-3 h-3" />
+              </span>
             </div>
           )}
         </div>
       </motion.div>
 
-      {/* ── Stats ── */}
+      {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <StatCard
+          icon={ShieldCheck} label="Total Orders" value={String(stats.total)}
+          sub={`${stats.successCount} completed`}
+          color="text-primary" bg="from-primary/5 to-transparent" delay={0.06}
+        />
+        <StatCard
+          icon={BadgeCheck} label="Success Rate" value={`${stats.successRate}%`}
+          sub={`${stats.successCount} devices unlocked`}
+          color="text-emerald-400" bg="from-emerald-500/5 to-transparent" delay={0.12}
+        />
+        <StatCard
+          icon={Cpu} label="Processing" value={String(stats.processingCount)}
+          sub="In progress now"
+          color="text-blue-400" bg="from-blue-500/5 to-transparent" delay={0.18}
+        />
+        <StatCard
+          icon={BarChart3} label="Queue Status" value={`${stats.activeCount}`}
+          sub={stats.activeCount > 0 ? 'Jobs queued · active' : 'All clear'}
+          color="text-violet-400" bg="from-violet-500/5 to-transparent" delay={0.24}
+        />
+      </div>
+
+      {/* ── Credits + Quick actions ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Credits card */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.28 }}>
+          <Card className={`relative overflow-hidden p-5 border-2 flex flex-col gap-4 h-full ${
+            empty ? 'border-red-500/30 bg-red-500/5'
+            : low  ? 'border-amber-500/25 bg-amber-500/5'
+            : 'border-primary/20 bg-gradient-to-br from-primary/8 via-primary/4 to-transparent'
+          }`}>
+            <div className={`absolute -top-12 -right-12 w-40 h-40 rounded-full blur-3xl pointer-events-none opacity-40 ${
+              empty ? 'bg-red-500' : low ? 'bg-amber-500' : 'bg-primary'
+            }`} />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Your Balance</p>
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                  empty ? 'bg-red-500/20' : low ? 'bg-amber-500/20' : 'bg-primary/20'
+                }`}>
+                  <Zap className={`w-3.5 h-3.5 ${empty ? 'text-red-400' : low ? 'text-amber-400' : 'text-primary'}`} />
+                </div>
+              </div>
+              <p className={`text-5xl font-black font-mono leading-none tracking-tight mt-3 ${
+                empty ? 'text-red-400' : low ? 'text-amber-400' : 'text-primary'
+              }`}>{credits}</p>
+              <p className="text-[11px] text-muted-foreground mt-2">credits · 1 credit = 1 unlock</p>
+              {credits > 0 && (
+                <p className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">≈ ${credits * 48} USD value</p>
+              )}
+            </div>
+            <Button size="sm" className="w-full gap-1.5 text-xs mt-auto" onClick={() => onNavigate('topup')}>
+              <Plus className="w-3.5 h-3.5" />Top Up Credits
+            </Button>
+          </Card>
+        </motion.div>
+
+        {/* Quick action cards */}
         {[
-          { icon: ShieldCheck,  label: 'Total Orders',  value: String(stats.total),           color: 'text-primary',    bg: 'bg-primary/10 border-primary/20',       sub: `${stats.successCount} completed`     },
-          { icon: BadgeCheck,   label: 'Success Rate',  value: `${stats.successRate}%`,       color: 'text-emerald-400',bg: 'bg-emerald-500/10 border-emerald-500/20',sub: `${stats.successCount} unlocked`      },
-          { icon: Cpu,          label: 'Processing',    value: String(stats.processingCount),  color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20',     sub: 'In progress now'                     },
-          { icon: Star,         label: 'Queue Status',  value: `${stats.activeCount} Jobs`,   color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20', sub: stats.activeCount > 0 ? 'Active — processing' : 'All clear' },
-        ].map(({ icon: Icon, label, value, color, bg, sub }, idx) => (
+          {
+            label: 'Submit New Request',
+            sub: 'Activate an unlock for one or more devices',
+            icon: Cpu,
+            page: 'request',
+            color: 'text-primary',
+            accent: 'border-primary/20 bg-primary/5',
+            glow: 'bg-primary',
+          },
+          {
+            label: 'Live Support Chat',
+            sub: "Talk to our team — we're online right now",
+            icon: MessageCircle,
+            page: 'chat',
+            color: 'text-emerald-400',
+            accent: 'border-emerald-500/20 bg-emerald-500/5',
+            glow: 'bg-emerald-500',
+          },
+        ].map(({ label, sub, icon: Icon, page, color, accent, glow }) => (
           <motion.div key={label}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.06, duration: 0.22 }}
-            whileHover={{ y: -2, transition: { duration: 0.15 } }}
+            transition={{ delay: 0.16, duration: 0.28 }}
           >
-            <Card className="p-4 border-border bg-card/50 flex flex-col gap-3 h-full hover:border-primary/20 hover:bg-card/80 transition-all cursor-default group">
-              <div className="flex items-center justify-between">
-                <div className={`w-9 h-9 rounded-xl ${bg} border flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <Icon className={`w-4 h-4 ${color}`} />
-                </div>
-                <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+            <Card
+              onClick={() => page === 'chat'
+                ? (document.querySelector<HTMLButtonElement>('[data-chat-toggle]') as HTMLButtonElement | null)?.click()
+                : onNavigate(page)
+              }
+              className={`relative overflow-hidden p-5 border ${accent} hover:border-opacity-40 transition-all duration-200 cursor-pointer group flex flex-col gap-4 h-full`}
+            >
+              <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl pointer-events-none opacity-0 group-hover:opacity-20 transition-opacity duration-500 ${glow}`} />
+              <div className={`w-10 h-10 rounded-2xl ${accent} border flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
+                <Icon className={`w-5 h-5 ${color}`} />
               </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
-                <p className="text-2xl font-black font-mono text-foreground">{value}</p>
-                <p className={`text-[10px] mt-0.5 font-medium ${color}`}>{sub}</p>
+              <div className="flex-1 relative">
+                <p className={`text-sm font-bold text-foreground group-hover:${color} transition-colors duration-150 mb-1`}>{label}</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">{sub}</p>
+                {page === 'chat' && (
+                  <span className="inline-flex items-center gap-1.5 mt-2 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Live
+                  </span>
+                )}
+              </div>
+              <div className={`flex items-center gap-1 text-[11px] font-semibold ${color} opacity-70 group-hover:opacity-100 transition-opacity`}>
+                Get started <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </Card>
           </motion.div>
         ))}
       </div>
 
-      {/* ── Credits + Quick actions ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className={`p-4 border-2 flex flex-col gap-3 relative overflow-hidden ${
-          empty ? 'border-red-500/30 bg-red-500/5' : low ? 'border-yellow-500/25 bg-yellow-500/5' : 'border-primary/25 bg-gradient-to-br from-primary/8 to-transparent'
-        }`}>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Your Balance</p>
-            <CoinsIcon className={`w-4 h-4 ${empty ? 'text-red-400' : low ? 'text-yellow-400' : 'text-primary'}`} />
-          </div>
-          <div>
-            <p className={`text-5xl font-black font-mono leading-none ${empty ? 'text-red-400' : low ? 'text-yellow-400' : 'text-primary'}`}>{credits}</p>
-            <p className="text-[10px] text-muted-foreground mt-1.5">credits remaining · 1 credit = 1 unlock</p>
-          </div>
-          <Button size="sm" className="w-full gap-1.5 text-xs" onClick={() => onNavigate('topup')}>
-            <Plus className="w-3.5 h-3.5" />Top Up Credits
-          </Button>
-          {credits > 0 && (
-            <div className="text-[9px] text-muted-foreground text-center font-mono">≈ ${credits * 48} USD value remaining</div>
-          )}
-        </Card>
-
-        {[
-          { label: 'Submit New Request', sub: 'Activate an unlock for one or more devices', icon: Cpu,    page: 'request', color: 'text-primary',   bg: 'bg-primary/10 border-primary/20'      },
-          { label: 'Live Support Chat',  sub: 'Talk to our team — we\'re online right now',  icon: MessageCircle, page: 'chat', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-        ].map(({ label, sub, icon: Icon, page, color, bg }) => (
-          <Card key={label}
-            onClick={() => page === 'chat' ? (document.querySelector<HTMLButtonElement>('[data-chat-toggle]') as HTMLButtonElement | null)?.click() : onNavigate(page)}
-            className="p-4 border-border bg-card/50 hover:border-primary/20 hover:bg-card/80 transition-all cursor-pointer group flex flex-col gap-3">
-            <div className={`w-9 h-9 rounded-xl ${bg} border flex items-center justify-center group-hover:scale-110 transition-transform`}>
-              <Icon className={`w-4 h-4 ${color}`} />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{label}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">{sub}</p>
-              {page === 'chat' && (
-                <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-semibold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Live
-                </span>
-              )}
-            </div>
-            <ArrowRight className={`w-4 h-4 text-muted-foreground group-hover:${color} group-hover:translate-x-0.5 transition-all`} />
-          </Card>
-        ))}
-      </div>
-
-      {/* ── Activity + Chart ── */}
+      {/* ── Activity Feed + Volume Chart ── */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         <div className="xl:col-span-5">
           <ActivityFeed />
         </div>
+
         <div className="xl:col-span-7 flex flex-col gap-4">
-          <Card className="border-border bg-card/50 overflow-hidden flex-1">
-            <div className="p-4 border-b border-border bg-card/80 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-semibold">Unlock Volume — Today (Hourly)</h3>
+          {/* Volume chart */}
+          <Card className="border-border/60 bg-card/60 overflow-hidden flex-1">
+            <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Unlock Volume</h3>
+                  <p className="text-[10px] text-muted-foreground">Today · hourly breakdown</p>
+                </div>
               </div>
-              <span className="text-xs font-mono text-muted-foreground">Total: {stats.total} orders</span>
+              <div className="text-right">
+                <p className="text-sm font-bold font-mono text-foreground">{stats.total}</p>
+                <p className="text-[10px] text-muted-foreground">total orders</p>
+              </div>
             </div>
             <div className="p-5">
-              <div className="flex items-end gap-1.5 h-28">
+              <div className="flex items-end gap-1 h-32">
                 {HOURLY_VOLUME.map((v, i) => (
-                  <motion.div key={i} className="flex-1 flex flex-col items-center gap-1"
-                    initial={{ scaleY: 0, originY: 1 }} animate={{ scaleY: 1 }}
-                    transition={{ duration: 0.5, delay: i * 0.04 }}>
-                    <div className="w-full rounded-t-sm bg-gradient-to-t from-primary/50 to-primary/80 hover:from-primary/70 hover:to-primary transition-all cursor-default"
-                      style={{ height: `${(v / maxVol) * 100}%` }} title={`${HOURS[i]}:00 — ${v} unlocks`} />
+                  <motion.div key={i}
+                    className="flex-1 flex flex-col items-center gap-1.5"
+                    initial={{ scaleY: 0, originY: 1 }}
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: 0.45, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <div
+                      className="w-full rounded-t-md bg-gradient-to-t from-primary/40 via-primary/70 to-primary/90 hover:from-primary/60 hover:to-primary cursor-default transition-all group relative"
+                      style={{ height: `${(v / maxVol) * 100}%` }}
+                      title={`${HOURS[i]}:00 — ${v} unlocks`}
+                    >
+                      <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-mono text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {v}
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </div>
-              <div className="flex gap-1.5 mt-1.5">
+              <div className="flex gap-1 mt-2">
                 {HOURS.map(h => (
-                  <div key={h} className="flex-1 text-center text-[9px] text-muted-foreground font-mono">{h}</div>
+                  <div key={h} className="flex-1 text-center text-[8px] text-muted-foreground/60 font-mono">{h}</div>
                 ))}
               </div>
             </div>
           </Card>
 
+          {/* Carrier + Device */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card className="border-border bg-card/50 overflow-hidden">
-              <div className="p-3 border-b border-border bg-card/80 flex items-center gap-2">
-                <Wifi className="w-3.5 h-3.5 text-primary" />
-                <h3 className="text-xs font-semibold">Carrier Success Rates</h3>
+            <Card className="border-border/60 bg-card/60 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                  <Signal className="w-3.5 h-3.5 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold">Carrier Success Rates</h3>
+                </div>
               </div>
-              <div className="p-3 flex flex-col gap-2.5">
+              <div className="p-4 flex flex-col gap-3">
                 {stats.finalCarrierStats.map(({ carrier, rate }, i) => (
                   <div key={carrier}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] text-foreground font-medium truncate max-w-[120px]">{carrier}</span>
-                      <span className="text-[10px] font-bold text-emerald-400 font-mono">{rate}%</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] text-foreground font-medium truncate max-w-[130px]">{carrier}</span>
+                      <span className="text-[11px] font-black text-emerald-400 font-mono">{rate}%</span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                      <motion.div className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-400"
-                        initial={{ width: 0 }} animate={{ width: `${rate}%` }}
-                        transition={{ duration: 0.6, delay: i * 0.07 }} />
+                    <div className="w-full h-1 rounded-full bg-white/5 overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-primary/70 to-emerald-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${rate}%` }}
+                        transition={{ duration: 0.7, delay: 0.3 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                      />
                     </div>
                   </div>
                 ))}
               </div>
             </Card>
 
-            <Card className="border-border bg-card/50 overflow-hidden">
-              <div className="p-3 border-b border-border bg-card/80 flex items-center gap-2">
-                <Smartphone className="w-3.5 h-3.5 text-primary" />
-                <h3 className="text-xs font-semibold">Device Breakdown</h3>
+            <Card className="border-border/60 bg-card/60 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                  <Smartphone className="w-3.5 h-3.5 text-violet-400" />
+                </div>
+                <h3 className="text-xs font-bold">Device Breakdown</h3>
               </div>
-              <div className="p-3 flex flex-col gap-3">
-                <div className="flex h-3 rounded-lg overflow-hidden gap-0.5">
+              <div className="p-4 flex flex-col gap-4">
+                {/* Segmented bar */}
+                <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5">
                   {DEVICE_BREAKDOWN.map(({ brand, share, color }) => (
-                    <div key={brand} className={`${color} opacity-80`} style={{ width: `${share}%` }} title={`${brand}: ${share}%`} />
+                    <motion.div
+                      key={brand}
+                      className={`${color} opacity-80 first:rounded-l-full last:rounded-r-full`}
+                      style={{ width: `${share}%` }}
+                      title={`${brand}: ${share}%`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.8 }}
+                      transition={{ delay: 0.4 }}
+                    />
                   ))}
                 </div>
                 <div className="flex flex-col gap-2">
                   {DEVICE_BREAKDOWN.map(({ brand, share, color }) => (
                     <div key={brand} className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-sm ${color} opacity-80`} />
-                        <span className="text-[10px] text-foreground">{brand}</span>
+                        <span className="text-[11px] text-foreground">{brand}</span>
                       </div>
-                      <span className="text-[10px] font-bold font-mono text-muted-foreground">{share}%</span>
+                      <span className="text-[11px] font-bold font-mono text-muted-foreground">{share}%</span>
                     </div>
                   ))}
                 </div>
@@ -327,71 +461,83 @@ export function DashboardPage({ credits, onNavigate }: DashboardPageProps) {
         </div>
       </div>
 
-      {/* ── System health + Queue ── */}
+      {/* ── System Health + Queue ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-border bg-card/50 overflow-hidden">
-          <div className="p-4 border-b border-border bg-card/80 flex items-center gap-2">
-            <Server className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold">System Health</h3>
-            <span className="ml-auto text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded">All Systems Operational</span>
+        <Card className="border-border/60 bg-card/60 overflow-hidden">
+          <div className="px-5 py-4 border-b border-border/50 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Server className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold">System Health</h3>
+            </div>
+            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full uppercase tracking-wide">
+              All Operational
+            </span>
           </div>
-          <div className="p-4 flex flex-col gap-3">
+          <div className="p-4 flex flex-col gap-1">
             {[
-              { label: 'Unlock API',         status: 'Operational', uptime: '99.98%', ok: true  },
-              { label: 'Activation Server',  status: 'Operational', uptime: '99.95%', ok: true  },
-              { label: 'IMEI Database',      status: 'Operational', uptime: '99.9%',  ok: true  },
-              { label: 'Carrier API Bridge', status: 'Operational', uptime: '99.4%',  ok: true  },
-              { label: 'Notification Hub',   status: 'Operational', uptime: '100%',   ok: true  },
-            ].map(({ label, status, uptime, ok }) => (
-              <div key={label} className="flex items-center justify-between group">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${ok ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`} />
-                  <span className="text-xs text-foreground">{label}</span>
+              { label: 'Unlock API',         uptime: '99.98%' },
+              { label: 'Activation Server',  uptime: '99.95%' },
+              { label: 'IMEI Database',      uptime: '99.9%'  },
+              { label: 'Carrier API Bridge', uptime: '99.4%'  },
+              { label: 'Notification Hub',   uptime: '100%'   },
+            ].map(({ label, uptime }) => (
+              <div key={label} className="flex items-center justify-between py-2.5 border-b border-border/30 last:border-0 group">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+                  <span className="text-xs text-foreground/80 group-hover:text-foreground transition-colors">{label}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-muted-foreground font-mono">{uptime}</span>
-                  <Badge variant="outline" className={`text-[9px] uppercase px-1.5 ${ok ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/8' : 'border-yellow-500/30 text-yellow-400 bg-yellow-500/8'}`}>
-                    {status}
-                  </Badge>
+                  <span className="text-[10px] text-muted-foreground/70 font-mono">{uptime}</span>
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border border-emerald-500/25 text-emerald-400 bg-emerald-500/8">
+                    OK
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card className="border-border bg-card/50 overflow-hidden">
-          <div className="p-4 border-b border-border bg-card/80 flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold">Processing Queue</h3>
+        <Card className="border-border/60 bg-card/60 overflow-hidden">
+          <div className="px-5 py-4 border-b border-border/50 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+              <Layers className="w-4 h-4 text-blue-400" />
+            </div>
+            <h3 className="text-sm font-bold">Processing Queue</h3>
           </div>
-          <div className="p-4 flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="p-5 flex flex-col gap-5">
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Active',    value: String(stats.activeCount),   color: 'text-yellow-400' },
-                { label: 'Completed', value: String(stats.successCount),  color: 'text-emerald-400' },
-                { label: 'Queued',    value: String(stats.queuedCount),   color: 'text-primary'    },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="p-3 rounded-xl bg-secondary/30 border border-border">
-                  <p className={`text-xl font-black font-mono ${color}`}>{value}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                { label: 'Active',    value: String(stats.activeCount),   color: 'text-amber-400',  border: 'border-amber-500/20'  },
+                { label: 'Done',      value: String(stats.successCount),  color: 'text-emerald-400',border: 'border-emerald-500/20'},
+                { label: 'Queued',    value: String(stats.queuedCount),   color: 'text-primary',    border: 'border-primary/20'    },
+              ].map(({ label, value, color, border }) => (
+                <div key={label} className={`p-3 rounded-2xl bg-white/3 border ${border} text-center`}>
+                  <p className={`text-2xl font-black font-mono ${color} leading-none`}>{value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1.5 uppercase tracking-wide font-semibold">{label}</p>
                 </div>
               ))}
             </div>
-            <div className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Queue by Carrier</p>
+
+            <div className="flex flex-col gap-2.5">
+              <p className="text-[10px] text-muted-foreground/70 uppercase tracking-widest font-bold">By Carrier</p>
               {stats.finalQueueList.length === 0 ? (
                 <div className="flex items-center gap-2 py-2 text-xs text-emerald-400">
                   <CheckCircle2 className="w-4 h-4" />Queue clear — all orders processed
                 </div>
               ) : stats.finalQueueList.map(({ carrier, jobs }, i) => (
-                <div key={carrier} className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground w-24 truncate shrink-0">{carrier}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <motion.div className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary"
-                      initial={{ width: 0 }} animate={{ width: `${(jobs / stats.maxQueueJobs) * 100}%` }}
-                      transition={{ duration: 0.5, delay: 0.3 + i * 0.07 }} />
+                <div key={carrier} className="flex items-center gap-3">
+                  <span className="text-[11px] text-muted-foreground/80 w-24 truncate shrink-0">{carrier}</span>
+                  <div className="flex-1 h-1 rounded-full bg-white/5 overflow-hidden">
+                    <motion.div
+                      className="h-full rounded-full bg-gradient-to-r from-primary/50 to-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(jobs / stats.maxQueueJobs) * 100}%` }}
+                      transition={{ duration: 0.55, delay: 0.35 + i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                    />
                   </div>
-                  <span className="text-[10px] text-muted-foreground font-mono w-6 text-right shrink-0">{jobs}</span>
+                  <span className="text-[11px] text-muted-foreground/70 font-mono w-5 text-right shrink-0">{jobs}</span>
                 </div>
               ))}
             </div>
@@ -399,78 +545,51 @@ export function DashboardPage({ credits, onNavigate }: DashboardPageProps) {
         </Card>
       </div>
 
-      {/* ── Recent alerts ── */}
-      <Card className="border-border bg-card/50 overflow-hidden">
-        <div className="p-4 border-b border-border bg-card/80 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-semibold">Recent Activity</h3>
+      {/* ── Recent Activity ── */}
+      <Card className="border-border/60 bg-card/60 overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold">Recent Activity</h3>
+              <p className="text-[10px] text-muted-foreground">Latest order events</p>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-7" onClick={() => onNavigate('history')}>
-            View all <ChevronRight className="w-3 h-3" />
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 h-8 hover:text-foreground" onClick={() => onNavigate('history')}>
+            View all <ChevronRight className="w-3.5 h-3.5" />
           </Button>
         </div>
-        <div className="divide-y divide-border/50">
+        <div className="divide-y divide-border/30">
           {stats.recentAlerts.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">No recent activity</div>
+            <div className="flex items-center justify-center py-10 text-xs text-muted-foreground">No recent activity</div>
           ) : stats.recentAlerts.map((a, i) => (
-            <div key={i} className="flex items-start gap-2.5 p-3.5 hover:bg-secondary/20 transition-colors">
-              <div className="mt-0.5 shrink-0">
-                {a.type === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                {a.type === 'warn'    && <AlertIcon    className="w-3.5 h-3.5 text-amber-400"   />}
-                {a.type === 'info'    && <Activity      className="w-3.5 h-3.5 text-primary"      />}
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 + i * 0.05, duration: 0.22 }}
+              className="flex items-start gap-3 px-5 py-3.5 hover:bg-white/2 transition-colors"
+            >
+              <div className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                a.type === 'success' ? 'bg-emerald-500/12 text-emerald-400' :
+                a.type === 'warn'    ? 'bg-amber-500/12 text-amber-400' :
+                                      'bg-primary/12 text-primary'
+              }`}>
+                {a.type === 'success' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                {a.type === 'warn'    && <AlertTriangle className="w-3.5 h-3.5" />}
+                {a.type === 'info'    && <Info className="w-3.5 h-3.5" />}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className={`text-[10px] leading-snug ${a.type === 'warn' ? 'text-amber-300' : 'text-foreground'}`}>{a.msg}</p>
-                <p className="text-[9px] text-muted-foreground font-mono mt-0.5">{a.time}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-foreground/90 leading-snug font-medium">{a.msg}</p>
               </div>
-            </div>
+              <span className="text-[10px] text-muted-foreground/60 shrink-0 font-mono whitespace-nowrap">{a.time}</span>
+            </motion.div>
           ))}
         </div>
       </Card>
 
-      {/* ── Platform summary ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { icon: Globe,        label: 'Countries Served',   value: '80+',   sub: 'Worldwide coverage'     },
-          { icon: Users,        label: 'Active Technicians', value: '12.4k', sub: 'Registered pros'         },
-          { icon: ShieldCheck,  label: 'Total Unlocks',      value: '2.1M+', sub: 'All time'               },
-          { icon: Sparkles,     label: 'Your Completed',     value: String(stats.successCount), sub: 'Completed orders' },
-        ].map(({ icon: Icon, label, value, sub }, idx) => (
-          <motion.div key={label}
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 + idx * 0.06 }}
-            whileHover={{ y: -2, transition: { duration: 0.15 } }}
-          >
-            <Card className="p-4 border-border bg-card/50 text-center h-full hover:border-primary/20 hover:bg-card/80 transition-all cursor-default group">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <Icon className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-xl font-black font-mono text-foreground">{value}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{label}</p>
-              <p className="text-[9px] text-primary/70 font-mono mt-0.5">{sub}</p>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
     </div>
   );
 }
-
-/* ── Inline icon components to avoid import conflicts ── */
-const AlertIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 3h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-  </svg>
-);
-const ClockIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-const CoinsIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18" /><path d="M7 6h1v4" /><path d="m16.71 13.88.7.71-2.82 2.82" />
-  </svg>
-);
