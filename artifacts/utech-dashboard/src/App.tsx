@@ -65,6 +65,7 @@ function AppShell() {
     window.location.hash === '#xx' ? 'admin' : 'dashboard'
   );
   const [pendingAnchor, setPendingAnchor] = useState<string | undefined>(undefined);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen]           = useState(false);
 
@@ -154,16 +155,48 @@ function AppShell() {
             <span className="text-[10px] bg-primary/10 border border-primary/20 text-primary font-mono px-1.5 py-0.5 rounded ml-1">RESTRICTED</span>
           </div>
           <button
-            onClick={() => {
-              history.replaceState(null, '', window.location.pathname);
-              setActivePage('dashboard');
-            }}
+            onClick={() => setShowExitConfirm(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-border hover:border-border/80 transition-all"
           >
             <LogOut className="w-3.5 h-3.5" />
             Exit Admin
           </button>
         </header>
+
+        {/* Exit Admin confirmation dialog */}
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                <div className="w-8 h-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                  <LogOut className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Exit Admin Session?</p>
+                  <p className="text-[11px] text-muted-foreground">You will be returned to the user dashboard.</p>
+                </div>
+              </div>
+              <div className="px-5 py-4 flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setShowExitConfirm(false);
+                    history.replaceState(null, '', window.location.pathname);
+                    setActivePage('dashboard');
+                  }}
+                  className="w-full h-9 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold tracking-wide transition-all"
+                >
+                  Yes, Exit Admin
+                </button>
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="w-full h-9 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
+                >
+                  Cancel — Stay in Admin
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Admin content — full width, no sidebar */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">

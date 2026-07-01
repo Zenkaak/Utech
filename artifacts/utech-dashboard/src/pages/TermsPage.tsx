@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { FileText, AlertTriangle } from 'lucide-react';
 
-const LAST_UPDATED = "July 1, 2026";
+const LAST_UPDATED = "May 18, 2026";
 
 export const TERMS: { id: string; title: string; content: React.ReactNode }[] = [
   {
