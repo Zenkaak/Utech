@@ -117,13 +117,26 @@ export const TERMS: { id: string; title: string; content: React.ReactNode }[] = 
     id: 'term-13',
     title: '13. Order Closure Upon Repeated Non-Compliance',
     content: (
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground leading-relaxed">
           If two (2) notices have been issued to a user regarding a pending order — including but not limited to pending payment, pending device information, or any other outstanding obligation — the order is automatically closed without further communication. No additional warnings will be issued prior to closure.
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed">
           UTECH SERVER UNLOCK will not be liable for any loss, damage, or inconvenience incurred as a result of an order being closed under this provision. It is the user's sole responsibility to respond to notices in a timely manner.
         </p>
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex flex-col gap-1">
+          <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest">13.1 — Less-Than-One-Hour Grace Period Exception</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Notwithstanding the general auto-closure rule above, if the second (2nd) notice is issued when <strong className="text-foreground">less than one (1) hour remains</strong> on the active order window, UTECH SERVER UNLOCK will extend a one-time grace period of{' '}
+            <strong className="text-foreground">one (1) additional hour</strong> from the time the second notice is issued before the order is closed. This grace period is granted automatically and does not require a request from the user.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            The grace period under Term 13.1 is a one-time accommodation only. If the outstanding obligation remains unresolved at the conclusion of the grace period, the order will be closed immediately and permanently without further notice. No additional extensions will be granted under any circumstance.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This exception applies solely to the timing of closure. All other provisions of Term 13 — including UTECH SERVER UNLOCK's non-liability for any resulting loss or inconvenience — remain fully in effect during and after the grace period.
+          </p>
+        </div>
       </div>
     ),
   },
