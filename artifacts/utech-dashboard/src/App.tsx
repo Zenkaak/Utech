@@ -4,6 +4,7 @@ import { Server, Coins, Bell, X, CheckCircle2, Info, Clock, AlertTriangle } from
 import { AnimatePresence, motion } from "framer-motion";
 import { Sidebar } from "./components/Sidebar";
 import { BottomNav } from "./components/BottomNav";
+import { ChatWidget } from "./components/ChatWidget";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ImeiForm } from "./components/ImeiForm";
 import { ActivityFeed } from "./components/ActivityFeed";
@@ -16,6 +17,7 @@ import { TermsPage } from "./pages/TermsPage";
 import { TopUpPage } from "./pages/TopUpPage";
 import { AdminPage } from "./pages/AdminPage";
 import { OrdersProvider, useOrders } from "./context/OrdersContext";
+import { ChatProvider, useChat } from "./context/ChatContext";
 
 const NOTIFICATIONS = [
   {
@@ -57,6 +59,7 @@ const NOTIFICATIONS = [
 
 function AppShell() {
   const { credits, adjustCredits } = useOrders();
+  const { unreadCount: chatUnread } = useChat();
 
   const [activePage, setActivePage] = useState(() =>
     window.location.hash === '#xx' ? 'admin' : 'dashboard'
@@ -136,7 +139,6 @@ function AppShell() {
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {/* Header */}
         <header className="shrink-0 h-12 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 gap-3">
-          {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileMenuOpen(o => !o)}
             className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
@@ -202,7 +204,7 @@ function AppShell() {
                           {n.type === 'warning' && <AlertTriangle className="w-3 h-3 text-amber-400" />}
                           {n.type === 'success' && <CheckCircle2  className="w-3 h-3 text-emerald-400" />}
                           {n.type === 'info'    && <Info          className="w-3 h-3 text-primary" />}
-                          {(n.type === 'queue' || (!['warning','success','info'].includes(n.type))) && <Clock className="w-3 h-3 text-muted-foreground" />}
+                          {(n.type !== 'warning' && n.type !== 'success' && n.type !== 'info') && <Clock className="w-3 h-3 text-muted-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className={`text-[11px] font-semibold ${n.type === 'warning' ? 'text-amber-300' : 'text-foreground'}`}>{n.title}</p>
@@ -266,7 +268,11 @@ function AppShell() {
         </footer>
       </div>
 
-      <BottomNav activePage={activePage} onNavigate={handleNavigate} errorCount={warningCount} />
+      <BottomNav activePage={activePage} onNavigate={handleNavigate} errorCount={warningCount} chatUnread={chatUnread} />
+
+      {/* Global chat widget */}
+      <ChatWidget />
+
       <Toaster theme="dark" position="bottom-right" />
     </div>
   );
@@ -275,7 +281,9 @@ function AppShell() {
 export default function App() {
   return (
     <OrdersProvider>
-      <AppShell />
+      <ChatProvider>
+        <AppShell />
+      </ChatProvider>
     </OrdersProvider>
   );
 }

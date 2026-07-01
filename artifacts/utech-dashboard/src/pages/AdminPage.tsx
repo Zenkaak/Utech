@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useOrders, Order } from '../context/OrdersContext';
+import { useChat, ChatMessage } from '../context/ChatContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import {
   CheckCircle2, Cpu, Clock, Eye, Plus, Trash2,
   List, FileText, Smartphone, PlusCircle, Settings2,
   AlertCircle, Info, X, ChevronDown, ChevronUp, Timer,
+  MessageCircle, Send, Paperclip, Download, CheckCheck, User,
 } from 'lucide-react';
 import { useCountdown } from '../hooks/useCountdown';
 import { toast } from 'sonner';
@@ -41,15 +43,150 @@ function nowDate() {
   return new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-type AdminTab = 'edit' | 'log' | 'imei' | 'new' | 'manage';
+type AdminTab = 'edit' | 'log' | 'imei' | 'new' | 'manage' | 'chat';
 
 const TABS: { key: AdminTab; label: string; icon: typeof Settings2 }[] = [
-  { key: 'edit',   label: 'Edit Order',     icon: Settings2   },
-  { key: 'log',    label: 'Activity Log',   icon: FileText    },
-  { key: 'imei',   label: 'IMEIs',          icon: Smartphone  },
-  { key: 'new',    label: 'New Order',      icon: PlusCircle  },
-  { key: 'manage', label: 'Manage Orders',  icon: List        },
+  { key: 'edit',   label: 'Edit Order',    icon: Settings2    },
+  { key: 'log',    label: 'Activity Log',  icon: FileText     },
+  { key: 'imei',   label: 'IMEIs',         icon: Smartphone   },
+  { key: 'new',    label: 'New Order',     icon: PlusCircle   },
+  { key: 'manage', label: 'Manage Orders', icon: List         },
+  { key: 'chat',   label: 'Live Chat',     icon: MessageCircle },
 ];
+
+/* ── Admin Chat Tab ── */
+function AdminChatTab() {
+  const { messages, unreadCount, replyAsAdmin, markAllRead, clearChat } = useChat();
+  const [reply, setReply]   = useState('');
+  const bottomRef           = useRef<HTMLDivElement>(null);
+  const fileRef             = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    markAllRead();
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages.length]);
+
+  const send = () => {
+    const t = reply.trim();
+    if (!t) return;
+    replyAsAdmin(t);
+    setReply('');
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    replyAsAdmin(`[Admin shared a file: ${file.name}]`, { url, name: file.name, type: file.type });
+    e.target.value = '';
+  };
+
+  const isImage = (type?: string) => type?.startsWith('image/');
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-1">
+          <MessageCircle className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">User Conversations</span>
+          <span className="flex items-center gap-1 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />Live
+          </span>
+        </div>
+        {unreadCount > 0 && (
+          <span className="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+            {unreadCount} unread
+          </span>
+        )}
+        <Button variant="ghost" size="sm" onClick={clearChat} className="text-xs text-muted-foreground h-7">
+          Clear chat
+        </Button>
+      </div>
+
+      {/* Messages */}
+      <div className="h-[340px] overflow-y-auto bg-background/40 rounded-xl border border-border p-3 flex flex-col gap-2">
+        {messages.map(msg => (
+          <div key={msg.id} className={`flex gap-2.5 items-end ${msg.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
+            {msg.from === 'user' && (
+              <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mb-1">
+                <User className="w-3 h-3 text-primary" />
+              </div>
+            )}
+            <div className={`max-w-[75%] flex flex-col gap-0.5 ${msg.from === 'admin' ? 'items-end' : 'items-start'}`}>
+              <span className="text-[9px] text-muted-foreground font-mono px-1">
+                {msg.from === 'admin' ? 'You (Admin)' : 'User'} · {msg.timestamp}
+              </span>
+              {msg.fileUrl && isImage(msg.fileType) ? (
+                <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="rounded-xl overflow-hidden border border-border">
+                  <img src={msg.fileUrl} alt={msg.fileName} className="max-w-[180px] max-h-[120px] object-cover" />
+                </a>
+              ) : msg.fileUrl ? (
+                <a href={msg.fileUrl} download={msg.fileName}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium ${
+                    msg.from === 'admin'
+                      ? 'bg-primary/15 border-primary/25 text-primary'
+                      : 'bg-secondary/50 border-border text-foreground'
+                  }`}>
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate max-w-[140px]">{msg.fileName}</span>
+                  <Download className="w-3 h-3 shrink-0" />
+                </a>
+              ) : (
+                <div className={`px-3 py-2 rounded-2xl text-xs leading-relaxed ${
+                  msg.from === 'admin'
+                    ? 'bg-primary text-white rounded-tr-sm'
+                    : 'bg-secondary/60 text-foreground border border-border/60 rounded-tl-sm'
+                }`}>
+                  {msg.text}
+                </div>
+              )}
+              {msg.from === 'admin' && (
+                <div className="flex items-center gap-1 px-1">
+                  <CheckCheck className="w-3 h-3 text-primary/60" />
+                  <span className="text-[9px] text-muted-foreground">Sent</span>
+                </div>
+              )}
+            </div>
+            {msg.from === 'admin' && (
+              <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 mb-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              </div>
+            )}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Reply input */}
+      <div className="flex gap-2 items-end">
+        <div className="flex-1 bg-secondary/30 border border-border rounded-xl px-3 py-2">
+          <textarea
+            value={reply}
+            onChange={e => setReply(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Type a reply as admin…"
+            rows={2}
+            className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none"
+          />
+          <div className="flex items-center gap-2 mt-1">
+            <button onClick={() => fileRef.current?.click()} className="text-muted-foreground hover:text-foreground transition-colors" title="Send file">
+              <Paperclip className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[9px] text-muted-foreground/50">Share files or images with user</span>
+          </div>
+        </div>
+        <Button onClick={send} disabled={!reply.trim()} size="sm" className="gap-1.5 self-end h-10">
+          <Send className="w-3.5 h-3.5" />Reply
+        </Button>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*,application/pdf,.txt,.doc,.docx" className="hidden" onChange={handleFile} />
+      <p className="text-[10px] text-muted-foreground text-center font-mono">
+        Replies appear instantly in the user's chat widget
+      </p>
+    </div>
+  );
+}
 
 /* ── Pin Gate ── */
 function PinGate({ onUnlock }: { onUnlock: () => void }) {
@@ -812,11 +949,12 @@ export function AdminPage() {
             <AnimatePresence mode="wait">
               <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}>
-                {tab === 'edit'   && <EditTab   selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
-                {tab === 'log'    && <LogTab    selectedId={selectedId} orders={orders} addEvent={addEvent} removeEvent={removeEvent} />}
-                {tab === 'imei'   && <ImeiTab   selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
+                {tab === 'edit'   && <EditTab      selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
+                {tab === 'log'    && <LogTab      selectedId={selectedId} orders={orders} addEvent={addEvent} removeEvent={removeEvent} />}
+                {tab === 'imei'   && <ImeiTab     selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
                 {tab === 'new'    && <NewOrderTab orders={orders} addOrder={addOrder} />}
-                {tab === 'manage' && <ManageTab  orders={orders} deleteOrder={deleteOrder} updateOrder={updateOrder} />}
+                {tab === 'manage' && <ManageTab   orders={orders} deleteOrder={deleteOrder} updateOrder={updateOrder} />}
+                {tab === 'chat'   && <AdminChatTab />}
               </motion.div>
             </AnimatePresence>
           </Card>
