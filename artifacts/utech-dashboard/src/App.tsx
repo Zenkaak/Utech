@@ -119,7 +119,7 @@ function AppShell() {
       case 'settings': return <SettingsPage />;
       case 'privacy':  return <PrivacyPage />;
       case 'terms':    return <TermsPage />;
-      case 'topup':    return <TopUpPage credits={credits} onSpend={handleSpend} />;
+      case 'topup':    return <TopUpPage onNavigate={handleNavigate} />;
       case 'admin':    return <AdminPage />;
       default:         return <DashboardPage credits={credits} onNavigate={handleNavigate} />;
     }
