@@ -8,7 +8,7 @@ import {
   Cpu, Copy, Check, Calendar, Hash, ShieldCheck, Activity,
   Search, Filter, Download, RotateCcw,
   TrendingUp, Smartphone, AlertTriangle, CreditCard, X,
-  ChevronDown, ChevronUp, Eye, Zap, Info,
+  ChevronDown, ChevronUp, Eye, Zap, Info, Mail, Send,
 } from 'lucide-react';
 import { useOrders, Order } from '../context/OrdersContext';
 
@@ -112,6 +112,8 @@ function PaymentWarningBanner({ imei }: { imei: string }) {
 function OrderDetail({ order, onBack, onNavigate }: { order: Order; onBack: () => void; onNavigate: (page: string) => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [showAllEvents, setShowAllEvents] = useState(false);
+  const [instructionsEmail, setInstructionsEmail] = useState('');
+  const [instructionsSent, setInstructionsSent] = useState(false);
   const meta   = statusMeta(order.status);
   const stage  = stageIndex(order.status);
   const Icon   = meta.icon;
@@ -370,6 +372,96 @@ function OrderDetail({ order, onBack, onNavigate }: { order: Order; onBack: () =
           </div>
         </div>
       </Card>
+
+      {/* ── Send Unlock Instructions ── */}
+      {order.status === 'success' && (
+        <Card className="border-border bg-card/50 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
+            <Mail className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">Send Unlock Instructions</span>
+          </div>
+          <div className="p-5">
+            {!instructionsSent ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Enter your email address to receive the unlock instructions for your completed devices.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      type="email"
+                      value={instructionsEmail}
+                      onChange={e => setInstructionsEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full h-9 pl-9 pr-3 bg-secondary/30 border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:bg-secondary/50 transition-all"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-2 text-xs font-bold shrink-0"
+                    onClick={() => { if (instructionsEmail.trim()) setInstructionsSent(true); }}
+                    disabled={!instructionsEmail.trim()}
+                  >
+                    <Send className="w-3.5 h-3.5" />Send Instructions
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-4"
+              >
+                <div className="relative overflow-hidden rounded-xl border border-amber-500/40 bg-amber-500/8">
+                  <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />
+                  <div className="p-4 sm:p-5 flex gap-4 items-start">
+                    <div className="shrink-0 w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        <span className="font-bold text-sm text-amber-300 uppercase tracking-wide">Payment Required</span>
+                        <span className="text-[10px] font-mono bg-amber-500/15 border border-amber-500/25 text-amber-400 px-1.5 py-0.5 rounded">ACTION NEEDED</span>
+                      </div>
+                      <p className="text-sm text-foreground leading-relaxed mb-3">
+                        To send unlock instructions for the latest device, a verification fee of{' '}
+                        <span className="font-black text-amber-300 text-base">$48.00 USD</span>{' '}
+                        is required.
+                      </p>
+                      {order.paymentPendingImei && (
+                        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 mb-4">
+                          <p className="text-[10px] uppercase tracking-widest text-amber-400/60 font-semibold mb-1.5">Device Pending Payment — IMEI</p>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-mono text-sm font-bold text-foreground/90 tracking-wide">{order.paymentPendingImei}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(order.paymentPendingImei!); setCopied('instr-imei'); setTimeout(() => setCopied(null), 2000); }}
+                              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            >
+                              {copied === 'instr-imei' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1.5 mb-4 text-xs text-muted-foreground">
+                        <p>Instructions will be sent to: <span className="font-semibold text-foreground">{instructionsEmail}</span></p>
+                        <p>Once payment is confirmed, instructions are dispatched automatically within minutes.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-[0_0_16px_rgba(245,158,11,0.25)]" onClick={() => onNavigate('topup')}>
+                          <CreditCard className="w-3.5 h-3.5" />Pay $48.00 &amp; Send Instructions
+                        </Button>
+                        <Button size="sm" variant="outline" className="gap-2 text-xs border-border text-muted-foreground" onClick={() => { setInstructionsSent(false); setInstructionsEmail(''); }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* ── Actions ── */}
       <div className="flex flex-wrap gap-3 pb-4">
