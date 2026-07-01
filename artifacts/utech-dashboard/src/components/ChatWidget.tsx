@@ -8,7 +8,57 @@ import { useChat } from '../context/ChatContext';
 
 type View = 'choice' | 'chat';
 
-export function ChatWidget() {
+interface ChatWidgetProps {
+  onNavigate?: (page: string, anchor?: string) => void;
+}
+
+/** Parse message text and render @t# / @p# as clickable tags */
+function MessageText({
+  text,
+  onNavigate,
+}: {
+  text: string;
+  onNavigate?: (page: string, anchor?: string) => void;
+}) {
+  const parts = text.split(/(@[tTpP]\d+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const tMatch = part.match(/^@[tT](\d+)$/);
+        const pMatch = part.match(/^@[pP](\d+)$/);
+        if (tMatch) {
+          const num = tMatch[1];
+          return (
+            <button
+              key={i}
+              onClick={() => onNavigate?.('terms', `term-${num}`)}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-primary/20 border border-primary/40 text-primary text-[10px] font-mono font-bold hover:bg-primary/30 transition-colors cursor-pointer mx-0.5"
+              title={`View Term ${num}`}
+            >
+              @t{num}
+            </button>
+          );
+        }
+        if (pMatch) {
+          const num = pMatch[1];
+          return (
+            <button
+              key={i}
+              onClick={() => onNavigate?.('privacy', `policy-${num}`)}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono font-bold hover:bg-emerald-500/30 transition-colors cursor-pointer mx-0.5"
+              title={`View Policy ${num}`}
+            >
+              @p{num}
+            </button>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
+export function ChatWidget({ onNavigate }: ChatWidgetProps) {
   const { messages, unreadCount, isOnline, sendMessage, markAllRead, clearChat, loading } = useChat();
 
   const [open, setOpen]     = useState(false);
@@ -277,7 +327,7 @@ export function ChatWidget() {
                                 ? 'bg-primary text-white rounded-tr-sm shadow-[0_0_12px_rgba(2,132,199,0.2)]'
                                 : 'bg-secondary/60 text-foreground border border-border/60 rounded-tl-sm'
                             }`}>
-                              {msg.text}
+                              <MessageText text={msg.text} onNavigate={onNavigate} />
                             </div>
                           )}
                           <div className={`flex items-center gap-1 px-1 ${msg.from === 'user' ? 'flex-row-reverse' : ''}`}>

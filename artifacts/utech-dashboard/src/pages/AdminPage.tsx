@@ -55,6 +55,30 @@ const TABS: { key: AdminTab; label: string; icon: typeof Settings2 }[] = [
 ];
 
 /* ── Admin Chat Tab ── */
+/** Render message text with clickable @t# / @p# tags */
+function AdminMessageText({ text }: { text: string }) {
+  const parts = text.split(/(@[tTpP]\d+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const tMatch = part.match(/^@[tT](\d+)$/);
+        const pMatch = part.match(/^@[pP](\d+)$/);
+        if (tMatch) return (
+          <span key={i} className="inline-flex items-center px-1 py-0.5 rounded bg-primary/25 border border-primary/40 text-primary font-mono text-[10px] font-bold mx-0.5">
+            @t{tMatch[1]}
+          </span>
+        );
+        if (pMatch) return (
+          <span key={i} className="inline-flex items-center px-1 py-0.5 rounded bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-[10px] font-bold mx-0.5">
+            @p{pMatch[1]}
+          </span>
+        );
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function AdminChatTab() {
   const { messages, unreadCount, replyAsAdmin, markAllRead, clearChat } = useChat();
   const [reply, setReply]   = useState('');
@@ -104,8 +128,17 @@ function AdminChatTab() {
         </Button>
       </div>
 
+      {/* Tag shortcuts hint */}
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-secondary/30 border border-border/60 text-[10px] text-muted-foreground font-mono">
+        <span className="font-semibold text-foreground">Tag shortcuts:</span>
+        <span className="px-1.5 py-0.5 rounded bg-primary/20 border border-primary/30 text-primary font-bold">@t13</span>
+        <span>→ Term 13 (clickable link for user)</span>
+        <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold">@p14</span>
+        <span>→ Policy 14</span>
+      </div>
+
       {/* Messages */}
-      <div className="h-[340px] overflow-y-auto bg-background/40 rounded-xl border border-border p-3 flex flex-col gap-2">
+      <div className="h-[300px] overflow-y-auto bg-background/40 rounded-xl border border-border p-3 flex flex-col gap-2">
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-2.5 items-end ${msg.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
             {msg.from === 'user' && (
@@ -138,7 +171,7 @@ function AdminChatTab() {
                     ? 'bg-primary text-white rounded-tr-sm'
                     : 'bg-secondary/60 text-foreground border border-border/60 rounded-tl-sm'
                 }`}>
-                  {msg.text}
+                  <AdminMessageText text={msg.text} />
                 </div>
               )}
               {msg.from === 'admin' && (
@@ -165,7 +198,7 @@ function AdminChatTab() {
             value={reply}
             onChange={e => setReply(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Type a reply as admin…"
+            placeholder="Type a reply… use @t13 for Term 13, @p14 for Policy 14"
             rows={2}
             className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none"
           />
@@ -182,7 +215,7 @@ function AdminChatTab() {
       </div>
       <input ref={fileRef} type="file" accept="image/*,application/pdf,.txt,.doc,.docx" className="hidden" onChange={handleFile} />
       <p className="text-[10px] text-muted-foreground text-center font-mono">
-        Replies appear instantly in the user's chat widget
+        Replies appear instantly · @t# → links to Term · @p# → links to Privacy Policy
       </p>
     </div>
   );

@@ -64,6 +64,7 @@ function AppShell() {
   const [activePage, setActivePage] = useState(() =>
     window.location.hash === '#xx' ? 'admin' : 'dashboard'
   );
+  const [pendingAnchor, setPendingAnchor] = useState<string | undefined>(undefined);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen]           = useState(false);
 
@@ -79,12 +80,23 @@ function AppShell() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, anchor?: string) => {
     setActivePage(page);
+    setPendingAnchor(anchor);
     setNotifOpen(false);
     setMobileMenuOpen(false);
     if (page !== 'admin') {
       history.replaceState(null, '', window.location.pathname);
+    }
+    if (anchor) {
+      setTimeout(() => {
+        const el = document.getElementById(anchor);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'transition-all');
+          setTimeout(() => el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-background', 'transition-all'), 2500);
+        }
+      }, 150);
     }
   };
 
@@ -120,8 +132,8 @@ function AppShell() {
       case 'lookup':   return <LookupPage onNavigate={handleNavigate} />;
       case 'support':  return <SupportPage />;
       case 'settings': return <SettingsPage />;
-      case 'privacy':  return <PrivacyPage />;
-      case 'terms':    return <TermsPage />;
+      case 'privacy':  return <PrivacyPage targetAnchor={pendingAnchor} />;
+      case 'terms':    return <TermsPage targetAnchor={pendingAnchor} />;
       case 'topup':    return <TopUpPage onNavigate={handleNavigate} />;
       case 'admin':    return <AdminPage />;
       default:         return <DashboardPage credits={credits} onNavigate={handleNavigate} />;
@@ -271,7 +283,7 @@ function AppShell() {
       <BottomNav activePage={activePage} onNavigate={handleNavigate} errorCount={warningCount} chatUnread={chatUnread} />
 
       {/* Global chat widget */}
-      <ChatWidget />
+      <ChatWidget onNavigate={handleNavigate} />
 
       <Toaster theme="dark" position="bottom-right" />
     </div>

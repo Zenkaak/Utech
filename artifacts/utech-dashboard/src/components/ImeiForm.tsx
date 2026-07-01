@@ -79,6 +79,7 @@ export function ImeiForm({ credits = 99, onSpend, onNavigate }: ImeiFormProps) {
   const [submittedAt, setSubmittedAt] = useState('');
   const [copied, setCopied] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [pipelineStage, setPipelineStage] = useState(1);
   const termRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +129,10 @@ export function ImeiForm({ credits = 99, onSpend, onNavigate }: ImeiFormProps) {
   }, [visibleLines]);
 
   const handleActivate = () => {
+    if (!agreedToTerms) {
+      setValidationError('You must agree to the Terms & Conditions and Privacy Policy before submitting.');
+      return;
+    }
     for (let i = 0; i < rows.length; i++) {
       if (rows[i].imei.length !== 15) { setValidationError(`Row ${i + 1}: IMEI must be exactly 15 digits (${rows[i].imei.length}/15).`); return; }
       if (!rows[i].token.trim()) { setValidationError(`Row ${i + 1}: Access token is required.`); return; }
@@ -569,12 +574,42 @@ export function ImeiForm({ credits = 99, onSpend, onNavigate }: ImeiFormProps) {
         </div>
       </div>
 
-      <div className="p-6 bg-secondary/20 border-t border-border">
-        <Button data-testid="button-activate" onClick={handleActivate}
-          className="w-full h-12 text-sm font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_24px_rgba(2,132,199,0.2)] hover:shadow-[0_0_32px_rgba(2,132,199,0.35)] transition-all gap-2">
+      <div className="p-6 bg-secondary/20 border-t border-border flex flex-col gap-3">
+        {/* Terms & conditions agreement checkbox */}
+        <label className="flex items-start gap-3 cursor-pointer group select-none">
+          <div className="mt-0.5 shrink-0">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={e => { setAgreedToTerms(e.target.checked); if (e.target.checked) setValidationError(''); }}
+              className="w-4 h-4 rounded border border-border bg-background accent-primary cursor-pointer"
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors">
+            I agree to the{' '}
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onNavigate?.('terms'); }}
+              className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+            >
+              Terms and Conditions
+            </button>
+            {' '}and{' '}
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onNavigate?.('privacy'); }}
+              className="text-primary underline underline-offset-2 hover:text-primary/80 transition-colors"
+            >
+              Privacy Policy
+            </button>
+            {' '}for UTECH Providers. By submitting, I confirm that all device information is accurate and that I have the legal right to submit this request.
+          </p>
+        </label>
+        <Button data-testid="button-activate" onClick={handleActivate} disabled={!agreedToTerms}
+          className="w-full h-12 text-sm font-bold tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_24px_rgba(2,132,199,0.2)] hover:shadow-[0_0_32px_rgba(2,132,199,0.35)] transition-all gap-2 disabled:opacity-50 disabled:shadow-none disabled:cursor-not-allowed">
           <Cpu className="w-4 h-4" />Activate Unlock Request<ChevronRight className="w-4 h-4" />
         </Button>
-        <p className="text-[10px] text-muted-foreground text-center mt-3 font-mono">
+        <p className="text-[10px] text-muted-foreground text-center font-mono">
           TLS 1.3 encrypted · 1 credit per IMEI · Results in ~30s
         </p>
       </div>
