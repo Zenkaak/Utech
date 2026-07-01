@@ -917,13 +917,59 @@ function NewOrderTab({ orders, addOrder }: { orders: Order[]; addOrder: (o: Orde
 }
 
 /* ── Manage Orders Tab ── */
-function ManageTab({ orders, deleteOrder, updateOrder }: {
+function ManageTab({ orders, deleteOrder, updateOrder, addEvent }: {
   orders: Order[];
   deleteOrder: (id: string) => void;
   updateOrder: (id: string, u: Partial<Omit<Order, 'id'>>) => void;
+  addEvent: (id: string, e: Order['events'][number]) => void;
 }) {
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const [confirm, setConfirm]   = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const allSelected = orders.length > 0 && orders.every(o => selected.has(o.id));
+
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(orders.map(o => o.id)));
+
+  const issueNoticeToSelected = () => {
+    if (selected.size === 0) return;
+    selected.forEach(id => {
+      const order = orders.find(o => o.id === id);
+      if (!order) return;
+      const cur = order.noticeCount ?? 0;
+      if (cur >= 2) return; // already at max
+      const next = cur + 1;
+      updateOrder(id, { noticeCount: next });
+      addEvent(id, {
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        msg: 'Notice #' + next + ' issued (bulk action)' + (next === 2 ? ' — Term 13 auto-closure applies' : ''),
+        type: next === 2 ? 'warn' : 'info',
+      });
+    });
+    const maxedOut = [...selected].filter(id => (orders.find(o => o.id === id)?.noticeCount ?? 0) >= 2).length;
+    const acted = selected.size - maxedOut;
+    if (acted > 0) toast.success('Notice issued to ' + acted + ' order' + (acted !== 1 ? 's' : ''));
+    if (maxedOut > 0) toast.error(maxedOut + ' order' + (maxedOut !== 1 ? 's' : '') + ' already at 2 notices');
+    setSelected(new Set());
+  };
+
+  const clearNoticesForSelected = () => {
+    if (selected.size === 0) return;
+    selected.forEach(id => {
+      updateOrder(id, { noticeCount: 0 });
+      addEvent(id, {
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        msg: 'Notice count reset to 0 (bulk action by admin)',
+        type: 'info',
+      });
+    });
+    toast.success('Notices cleared for ' + selected.size + ' order' + (selected.size !== 1 ? 's' : ''));
+    setSelected(new Set());
+  };
 
   const statusColor = (s: string) =>
     s === 'success' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
@@ -931,14 +977,64 @@ function ManageTab({ orders, deleteOrder, updateOrder }: {
                          'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
 
   return (
-    <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+    <div className="space-y-2">
+      {/* Bulk action toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={toggleAll}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-border bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
+        >
+          <div className={[
+            'w-3.5 h-3.5 rounded border flex items-center justify-center transition-all',
+            allSelected ? 'bg-primary border-primary' : 'border-border bg-background',
+          ].join(' ')}>
+            {allSelected && <span className="text-white text-[8px] font-bold leading-none">✓</span>}
+          </div>
+          {allSelected ? 'Deselect All' : 'Select All'}
+        </button>
+
+        {selected.size > 0 && (
+          <>
+            <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-1 rounded-lg">
+              {selected.size} selected
+            </span>
+            <button
+              onClick={issueNoticeToSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all"
+            >
+              <AlertCircle className="w-3 h-3" />Issue Notice
+            </button>
+            <button
+              onClick={clearNoticesForSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-border bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            >
+              <X className="w-3 h-3" />Clear Notices
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
       {orders.length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-8">No orders.</p>
       )}
       {orders.map(o => (
         <div key={o.id} className="rounded-xl border border-border bg-card/50 overflow-hidden">
           {/* Row */}
-          <div className="flex items-center gap-3 p-3">
+          <div className={[
+            'flex items-center gap-3 p-3 transition-colors',
+            selected.has(o.id) ? 'bg-primary/5' : '',
+          ].join(' ')}>
+            {/* Checkbox */}
+            <button
+              onClick={() => toggleSelect(o.id)}
+              className={[
+                'w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all',
+                selected.has(o.id) ? 'bg-primary border-primary' : 'border-border bg-background hover:border-primary/60',
+              ].join(' ')}
+            >
+              {selected.has(o.id) && <span className="text-white text-[8px] font-bold leading-none">✓</span>}
+            </button>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-semibold text-foreground">{o.id}</span>
@@ -1021,6 +1117,7 @@ function ManageTab({ orders, deleteOrder, updateOrder }: {
           </AnimatePresence>
         </div>
       ))}
+      </div>
     </div>
   );
 }
@@ -1172,7 +1269,7 @@ export function AdminPage() {
                 {tab === 'log'    && <LogTab      selectedId={selectedId} orders={orders} addEvent={addEvent} removeEvent={removeEvent} />}
                 {tab === 'imei'   && <ImeiTab     selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
                 {tab === 'new'    && <NewOrderTab orders={orders} addOrder={addOrder} />}
-                {tab === 'manage' && <ManageTab   orders={orders} deleteOrder={deleteOrder} updateOrder={updateOrder} />}
+                {tab === 'manage' && <ManageTab   orders={orders} deleteOrder={deleteOrder} updateOrder={updateOrder} addEvent={addEvent} />}
                 {tab === 'chat'   && <AdminChatTab />}
               </motion.div>
             </AnimatePresence>
