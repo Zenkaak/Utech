@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface Order {
   id: string;
@@ -15,9 +15,11 @@ export interface Order {
   progress?: number;
   countdownUntil?: number;
   verificationFlow?: boolean;
-  /** IMEI that has unlock completed but payment pending */
   paymentPendingImei?: string;
 }
+
+const ORDERS_KEY  = 'utech_orders';
+const CREDITS_KEY = 'utech_credits';
 
 const INITIAL_ORDERS: Order[] = [
   {
@@ -140,6 +142,27 @@ const INITIAL_ORDERS: Order[] = [
   },
 ];
 
+const INITIAL_CREDITS = 24;
+
+function loadOrders(): Order[] {
+  try {
+    const raw = localStorage.getItem(ORDERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Order[];
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return INITIAL_ORDERS;
+}
+
+function loadCredits(): number {
+  try {
+    const raw = localStorage.getItem(CREDITS_KEY);
+    if (raw !== null) return Number(raw) || INITIAL_CREDITS;
+  } catch {}
+  return INITIAL_CREDITS;
+}
+
 interface OrdersContextValue {
   orders: Order[];
   credits: number;
@@ -156,8 +179,35 @@ interface OrdersContextValue {
 const OrdersContext = createContext<OrdersContextValue | null>(null);
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [creditsState, setCreditsState] = useState(24);
+  const [orders, setOrders]           = useState<Order[]>(loadOrders);
+  const [creditsState, setCreditsState] = useState<number>(loadCredits);
+
+  // Persist orders to localStorage whenever they change
+  useEffect(() => {
+    try { localStorage.setItem(ORDERS_KEY, JSON.stringify(orders)); } catch {}
+  }, [orders]);
+
+  // Persist credits
+  useEffect(() => {
+    try { localStorage.setItem(CREDITS_KEY, String(creditsState)); } catch {}
+  }, [creditsState]);
+
+  // Cross-tab sync — admin panel changes reflect on user dashboard immediately
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ORDERS_KEY && e.newValue) {
+        try {
+          const updated = JSON.parse(e.newValue) as Order[];
+          if (Array.isArray(updated)) setOrders(updated);
+        } catch {}
+      }
+      if (e.key === CREDITS_KEY && e.newValue !== null) {
+        setCreditsState(Number(e.newValue) || 0);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const updateOrder = (id: string, patch: Partial<Order>) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, ...patch } : o));
