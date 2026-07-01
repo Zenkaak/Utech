@@ -1,0 +1,5 @@
+{
+  "outputDirectory": "artifacts/utech-dashboard/dist/public",
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install"
+}
