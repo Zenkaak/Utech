@@ -256,10 +256,11 @@ function PinGate({ onUnlock }: { onUnlock: () => void }) {
 }
 
 /* ── Edit Order Tab ── */
-function EditTab({ selectedId, orders, updateOrder }: {
+function EditTab({ selectedId, orders, updateOrder, addEvent }: {
   selectedId: string;
   orders: Order[];
   updateOrder: (id: string, u: Partial<Omit<Order, 'id'>>) => void;
+  addEvent: (id: string, e: Order['events'][number]) => void;
 }) {
   const order = orders.find(o => o.id === selectedId);
   const [status,   setStatus]   = useState<Order['status']>('processing');
@@ -270,7 +271,10 @@ function EditTab({ selectedId, orders, updateOrder }: {
   const [updatedAt, setUpdatedAt] = useState('');
   const [cdHours,  setCdHours]  = useState('2');
   const [cdMins,   setCdMins]   = useState('0');
-  const countdown = useCountdown(order?.countdownUntil);
+  const [gpHours,  setGpHours]  = useState('1');
+  const [gpMins,   setGpMins]   = useState('0');
+  const countdown   = useCountdown(order?.countdownUntil);
+  const gracePeriod = useCountdown(order?.gracePeriodUntil);
 
   useEffect(() => {
     if (order) {
@@ -425,6 +429,83 @@ function EditTab({ selectedId, orders, updateOrder }: {
         </p>
       </div>
 
+      {/* ── Grace Period — Term 13.1 ── */}
+      <div className="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] text-amber-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
+            <AlertCircle className="w-3 h-3" />
+            Grace Period
+            <span className="text-[9px] bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono px-1 py-0.5 rounded ml-1">
+              Term 13.1
+            </span>
+          </label>
+          {gracePeriod.active ? (
+            <span className={[
+              'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border',
+              gracePeriod.expired || gracePeriod.remaining < 15 * 60_000
+                ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                : 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+            ].join(' ')}>
+              {gracePeriod.expired ? 'EXPIRED' : gracePeriod.formatted}
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-muted-foreground/50 px-2 py-0.5 rounded-full border border-border/40">
+              Inactive
+            </span>
+          )}
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <div className="flex gap-1.5 items-center flex-1">
+            <Input
+              type="number" min={0} max={99} value={gpHours}
+              onChange={e => setGpHours(e.target.value)}
+              className="w-20 text-center font-mono"
+            />
+            <span className="text-xs text-muted-foreground">h</span>
+            <Input
+              type="number" min={0} max={59} value={gpMins}
+              onChange={e => setGpMins(e.target.value)}
+              className="w-20 text-center font-mono"
+            />
+            <span className="text-xs text-muted-foreground">m</span>
+          </div>
+          <Button
+            size="sm" variant="outline"
+            onClick={() => {
+              const h = parseInt(gpHours) || 0;
+              const m = parseInt(gpMins)  || 0;
+              if (h === 0 && m === 0) { toast.error('Set a grace period duration'); return; }
+              const until = Date.now() + h * 3_600_000 + m * 60_000;
+              updateOrder(selectedId, { gracePeriodUntil: until });
+              addEvent(selectedId, { time: nowTime(), msg: 'Grace period ' + (gracePeriod.active && !gracePeriod.expired ? 'adjusted' : 'started') + ': ' + h + 'h ' + m + 'm (Term 13.1)', type: 'warn' });
+              toast.success('Grace period ' + (gracePeriod.active && !gracePeriod.expired ? 'adjusted' : 'started') + ': ' + h + 'h ' + m + 'm');
+            }}
+            className="shrink-0 gap-1.5 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+          >
+            <Timer className="w-3.5 h-3.5" />
+            {gracePeriod.active && !gracePeriod.expired ? 'Adjust' : 'Start'}
+          </Button>
+          {gracePeriod.active && (
+            <Button
+              size="sm" variant="outline"
+              onClick={() => {
+                updateOrder(selectedId, { gracePeriodUntil: undefined });
+                addEvent(selectedId, { time: nowTime(), msg: 'Grace period cleared by admin', type: 'info' });
+                toast.success('Grace period cleared');
+              }}
+              className="shrink-0 border-red-500/30 text-red-400 hover:bg-red-500/10"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+
+        <p className="text-[10px] text-amber-400/60 font-mono">
+          Applies under Term 13.1 — 2nd notice issued with &lt;1 hr left · action auto-logged
+        </p>
+      </div>
+
       <Button onClick={apply} className="w-full gap-2 mt-2">
         <Save className="w-4 h-4" />Apply Changes
       </Button>
@@ -451,6 +532,14 @@ function EditTab({ selectedId, orders, updateOrder }: {
         </div>
         <div className="flex justify-between text-xs"><span className="text-muted-foreground">Carrier</span><span>{carrier || '—'}</span></div>
         <div className="flex justify-between text-xs"><span className="text-muted-foreground">Region</span><span>{region || '—'}</span></div>
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">Grace Period</span>
+          <span className={gracePeriod.active
+            ? gracePeriod.expired ? 'text-red-400 font-semibold' : 'text-amber-400 font-semibold'
+            : 'text-muted-foreground'}>
+            {gracePeriod.active ? (gracePeriod.expired ? 'EXPIRED' : gracePeriod.formatted) : '—'}
+          </span>
+        </div>
         <div className="mt-2">
           <div className="flex justify-between text-[10px] text-muted-foreground mb-1"><span>Progress</span><span>{progress}%</span></div>
           <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
@@ -982,7 +1071,7 @@ export function AdminPage() {
             <AnimatePresence mode="wait">
               <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}>
-                {tab === 'edit'   && <EditTab      selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
+                {tab === 'edit'   && <EditTab      selectedId={selectedId} orders={orders} updateOrder={updateOrder} addEvent={addEvent} />}
                 {tab === 'log'    && <LogTab      selectedId={selectedId} orders={orders} addEvent={addEvent} removeEvent={removeEvent} />}
                 {tab === 'imei'   && <ImeiTab     selectedId={selectedId} orders={orders} updateOrder={updateOrder} />}
                 {tab === 'new'    && <NewOrderTab orders={orders} addOrder={addOrder} />}

@@ -14,6 +14,8 @@ export interface Order {
   creditAlert?: 'exhausted' | 'low';
   progress?: number;
   countdownUntil?: number;
+  gracePeriodUntil?: number;
+  noticeCount?: number;
   verificationFlow?: boolean;
   paymentPendingImei?: string;
 }
