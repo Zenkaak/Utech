@@ -1,5 +1,10 @@
 {
-  "outputDirectory": "artifacts/utech-dashboard/dist/public",
   "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install"
+  "outputDirectory": "artifacts/utech-dashboard/dist/public",
+  "installCommand": "pnpm install",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
+

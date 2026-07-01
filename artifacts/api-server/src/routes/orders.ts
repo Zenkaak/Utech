@@ -92,13 +92,14 @@ const INITIAL_ORDERS = [
 
 router.get("/", async (req, res) => {
   try {
+    const pinned = INITIAL_ORDERS[0];
+    await db.insert(ordersTable)
+      .values({ id: pinned.id, data: pinned as object })
+      .onConflictDoUpdate({ target: ordersTable.id, set: { data: pinned as object } });
+    await db.insert(ordersTable)
+      .values(INITIAL_ORDERS.slice(1).map(o => ({ id: o.id, data: o as object })))
+      .onConflictDoNothing();
     let rows = await db.select().from(ordersTable);
-    if (rows.length === 0) {
-      await db.insert(ordersTable).values(
-        INITIAL_ORDERS.map(o => ({ id: o.id, data: o }))
-      );
-      rows = await db.select().from(ordersTable);
-    }
     const orders = rows
       .map(r => ({ ...(r.data as object), id: r.id, _createdAt: r.createdAt }))
       .sort((a: any, b: any) => new Date(b._createdAt ?? 0).getTime() - new Date(a._createdAt ?? 0).getTime())
